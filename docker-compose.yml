@@ -1,0 +1,12 @@
+version: "2"
+
+services:
+  datastore:
+    image: singularities/datastore-emulator
+    environment:
+      - DATASTORE_PROJECT_ID=acme-books
+      - DATASTORE_LISTEN_ADDRESS=0.0.0.0:3031
+    ports:
+      - "3031:3031"
+    volumes:
+      - "~/.config/gcloud/emulators/datastore/:/opt/data"
