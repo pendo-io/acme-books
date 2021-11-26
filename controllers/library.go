@@ -12,8 +12,18 @@ import (
 type LibraryController struct{}
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
+	qs := r.URL.Query()
+	author, title := qs.Get("author"), qs.Get("title")
+
 	query := datastore.NewQuery("Book").
 				Order("Id")
+
+	if author != "" {
+		query = query.Filter("Author=", author)
+	}
+	if title != "" {
+		query = query.Filter("Title=", title)
+	}
 
 	output := service.GetFromStore(query)
 
