@@ -28,6 +28,10 @@ func (cds CloudDatastore) PutMulti(keys []*datastore.Key, src interface{}) (ret 
 	return cds.client.PutMulti(cds.ctx, keys, src)
 }
 
+func (cds CloudDatastore) Put(key *datastore.Key, src interface{}) (ret *datastore.Key, err error) {
+	return cds.client.Put(cds.ctx, key, src)
+}
+
 func (cds CloudDatastore) Run(q *datastore.Query) *datastore.Iterator {
 	return cds.client.Run(cds.ctx, q)
 }
