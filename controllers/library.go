@@ -20,7 +20,7 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	output := make([]models.Book, 0)
 
-	it := client.Run(datastore.NewQuery("Book"))
+	it := client.Run(datastore.NewQuery("Book").Order("Id"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
