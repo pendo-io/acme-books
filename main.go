@@ -1,13 +1,13 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 
 	"cloud.google.com/go/datastore"
 
+	"acme-books/databases"
 	"acme-books/models"
 	"acme-books/server"
 
@@ -36,8 +36,7 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks() {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+	client, _ := databases.NewDatabaseClient()
 
 	defer client.Close()
 
@@ -55,7 +54,7 @@ func bootstrapBooks() {
 		&models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
 	}
 
-	if _, err := client.PutMulti(ctx, keys, books); err != nil {
+	if _, err := client.PutMulti(keys, books); err != nil {
 		fmt.Println(err)
 	}
 }

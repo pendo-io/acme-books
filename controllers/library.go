@@ -1,27 +1,26 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
 
+	"acme-books/databases"
 	"acme-books/models"
 )
 
 type LibraryController struct{}
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+	client, _ := databases.NewDatabaseClient()
 
 	defer client.Close()
 
 	output := make([]models.Book, 0)
 
-	it := client.Run(ctx, datastore.NewQuery("Book"))
+	it := client.Run(datastore.NewQuery("Book"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
