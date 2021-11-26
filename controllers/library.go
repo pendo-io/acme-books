@@ -12,7 +12,8 @@ import (
 type LibraryController struct{}
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	query := datastore.NewQuery("Book")
+	query := datastore.NewQuery("Book").
+				Order("Id")
 
 	output := service.GetFromStore(query)
 
