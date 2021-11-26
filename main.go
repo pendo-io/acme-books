@@ -1,15 +1,12 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
 
-	"cloud.google.com/go/datastore"
-
 	"acme-books/models"
 	"acme-books/server"
+	"acme-books/service"
 
 	"github.com/joho/godotenv"
 )
@@ -36,26 +33,8 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks() {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
-	keys := []*datastore.Key{
-		datastore.NameKey("Book", "1984", nil),
-		datastore.NameKey("Book", "Animal Farm", nil),
-		datastore.NameKey("Book", "Eye of the world", nil),
-		datastore.NameKey("Book", "Dictionary", nil),
-	}
-
-	books := []interface{}{
-		&models.Book{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
-		&models.Book{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
-		&models.Book{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
-		&models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
-	}
-
-	if _, err := client.PutMulti(ctx, keys, books); err != nil {
-		fmt.Println(err)
-	}
+	service.AddToStore(models.Book{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false})
+	service.AddToStore(models.Book{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false})
+	service.AddToStore(models.Book{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false})
+	service.AddToStore(models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false})
 }
