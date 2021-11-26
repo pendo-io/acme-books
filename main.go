@@ -33,8 +33,8 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks() {
-	service.AddToStore(models.Book{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false})
-	service.AddToStore(models.Book{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false})
-	service.AddToStore(models.Book{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false})
-	service.AddToStore(models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false})
+	service.AddOrUpdateStore(&models.Book{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false})
+	service.AddOrUpdateStore(&models.Book{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false})
+	service.AddOrUpdateStore(&models.Book{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false})
+	service.AddOrUpdateStore(&models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false})
 }

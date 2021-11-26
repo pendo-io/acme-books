@@ -15,17 +15,17 @@ func client() *datastore.Client {
 	return c
 }
 
-func AddToStore(book models.Book) {
+func AddOrUpdateStore(book *models.Book) {
 	c := client()
 
 	defer c.Close()
 
-	if _, err := c.Put(context.Background(), datastore.NameKey("Book", book.Title, nil), &book); err != nil {
+	if _, err := c.Put(context.Background(), datastore.NameKey("Book", book.Title, nil), book); err != nil {
 		fmt.Println(err)
 	}
 }
 
-func GetFromStore(query *datastore.Query) *[]models.Book {
+func GetFromStore(query *datastore.Query) []models.Book {
 	c := client()
 
 	defer c.Close()
@@ -40,5 +40,5 @@ func GetFromStore(query *datastore.Query) *[]models.Book {
 		}
 		output = append(output, b)
 	}
-	return &output
+	return output
 }
