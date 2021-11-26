@@ -14,13 +14,15 @@ import (
 type LibraryController struct{}
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
+	writer, _ := r.URL.Query()["writer"]
+
 	client, _ := databases.NewDatabaseClient()
 
 	defer client.Close()
 
 	output := make([]models.Book, 0)
 
-	it := client.Run(datastore.NewQuery("Book").Order("Id"))
+	it := client.Run(datastore.NewQuery("Book").Filter("Author =", writer[0]).Order("Id"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
