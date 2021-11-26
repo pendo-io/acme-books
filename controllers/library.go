@@ -35,6 +35,28 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 	w.Write(j)
 }
 
+func (lc LibraryController) AddBook(w http.ResponseWriter, r *http.Request) {
+	idStr, author, title := r.FormValue("id"), r.FormValue("author"), r.FormValue("title")
+
+	id, err := strconv.Atoi(idStr)
+	if idStr == "" || author == "" || title == "" || err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Invalid request"))
+		return
+	}
+
+	book := models.Book{
+		Id:  id,
+		Title: title,
+		Author:  author,
+		Borrowed: false,
+	}
+
+	service.AddOrUpdateStore(&book)
+
+	w.WriteHeader(204)
+}
+
 func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter) {
 	book, err := getBookById(params)
 	if err != nil {
