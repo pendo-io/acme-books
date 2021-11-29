@@ -17,7 +17,7 @@ type LibraryController struct {
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	output := make([]models.Book, 0)
-	it := lc.Client.Run(r.Context(), datastore.NewQuery("Book"))
+	it := lc.Client.Run(r.Context(), datastore.NewQuery("Book").Order("Id"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
