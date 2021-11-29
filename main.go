@@ -41,21 +41,23 @@ func bootstrapBooks() {
 
 	defer client.Close()
 
-	keys := []*datastore.Key{
-		datastore.NameKey("Book", "1984", nil),
-		datastore.NameKey("Book", "Animal Farm", nil),
-		datastore.NameKey("Book", "Eye of the world", nil),
-		datastore.NameKey("Book", "Dictionary", nil),
+	books := []models.Book{
+		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
+		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
+		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
+		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
 	}
 
-	books := []interface{}{
-		&models.Book{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
-		&models.Book{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
-		&models.Book{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
-		&models.Book{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
+	keys := make([]*datastore.Key, len(books))
+	for _, b := range books {
+		keys = append(keys, makeKey(b))
 	}
 
 	if _, err := client.PutMulti(ctx, keys, books); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func makeKey(b models.Book) *datastore.Key {
+	return datastore.NameKey("Book", b.Title, nil)
 }
