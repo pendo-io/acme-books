@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -38,24 +37,17 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks(client *datastore.Client, ctx context.Context) {
-
 	books := []models.Book{
 		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
 		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
 		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
 		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
 	}
-
-	keys := make([]*datastore.Key, len(books))
+	keys := make([]*datastore.Key, 0)
 	for _, b := range books {
-		keys = append(keys, makeKey(b))
+		keys = append(keys, datastore.IDKey("Book", int64(b.Id), nil))
 	}
-
 	if _, err := client.PutMulti(ctx, keys, books); err != nil {
-		fmt.Println(err)
+		log.Fatalln(err)
 	}
-}
-
-func makeKey(b models.Book) *datastore.Key {
-	return datastore.NameKey("Book", b.Title, nil)
 }

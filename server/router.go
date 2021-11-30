@@ -10,6 +10,8 @@ import (
 func NewRouter(client datastore.Client) *martini.ClassicMartini {
 	libraryController := controllers.LibraryController{Client: client}
 	router := martini.Classic()
+
 	router.Get("/books", libraryController.ListAll)
+	router.Put("/:id/borrow", libraryController.Borrow)
 	return router
 }
