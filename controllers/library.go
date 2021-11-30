@@ -19,10 +19,14 @@ type LibraryController struct {
 }
 
 func (lc LibraryController) Borrow(r *http.Request, w http.ResponseWriter, params martini.Params) {
+	lc.borrow_and_return(r, w, params, true)
+}
+func (lc LibraryController) Return(r *http.Request, w http.ResponseWriter, params martini.Params) {
+	lc.borrow_and_return(r, w, params, false)
+}
 
-	// 204 if ok
-	// 400 if already borrowed
-	// 400 if not borrowed when returned
+func (lc LibraryController) borrow_and_return(r *http.Request, w http.ResponseWriter, params martini.Params, borrow bool) {
+
 	paramId := params["id"]
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
@@ -37,12 +41,12 @@ func (lc LibraryController) Borrow(r *http.Request, w http.ResponseWriter, param
 			return
 		}
 	}
-	if b.Borrowed {
+	if borrow == b.Borrowed {
 		w.WriteHeader(400)
 		return
 	}
 	log.Println("loaded book:", b)
-	b.Borrowed = true
+	b.Borrowed = borrow
 	_, err = lc.Client.Put(r.Context(), datastore.IDKey("Book", int64(b.Id), nil), b)
 	if err != nil {
 		log.Fatalln(err)
