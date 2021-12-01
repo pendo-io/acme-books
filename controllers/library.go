@@ -18,6 +18,25 @@ type LibraryController struct {
 	Client datastore.Client
 }
 
+func (lc LibraryController) Create(r *http.Request, w http.ResponseWriter) {
+	var newBook models.Book
+	err := json.NewDecoder(r.Body).Decode(&newBook)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Printf("newBook:%v", newBook)
+	newKey, err := lc.Client.Put(r.Context(), datastore.IncompleteKey("Book", nil), &newBook)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	result := map[int64]models.Book{newKey.ID: newBook}
+	if j, err := json.MarshalIndent(result, "", ""); err == nil {
+		w.Write(j)
+	} else {
+		log.Fatalln(err)
+	}
+}
+
 func (lc LibraryController) Borrow(r *http.Request, w http.ResponseWriter, params martini.Params) {
 	lc.borrow_and_return(r, w, params, true)
 }
