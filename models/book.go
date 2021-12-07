@@ -1,8 +1,8 @@
 package models
 
 type Book struct {
-	Id       int
+	Id       int64
 	Title    string `json:"title"`
-	Author   string `json:"writer"`
+	Author   string `json:"author"`
 	Borrowed bool   `json:"borrowed"`
 }

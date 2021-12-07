@@ -6,12 +6,16 @@ import (
 	"acme-books/controllers"
 )
 
-func NewRouter() *martini.ClassicMartini {
-	libraryController := new(controllers.LibraryController)
+func NewRouter(libraryController *controllers.LibraryController) *martini.ClassicMartini {
 
 	router := martini.Classic()
 
 	router.Get("/books", libraryController.ListAll)
 
+	router.Put("/:id/borrow", libraryController.Borrow)
+
+	router.Put("/:id/return", libraryController.Return)
+
+	router.Post("/book", libraryController.Add)
 	return router
 }
