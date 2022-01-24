@@ -1,15 +1,12 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
 
 	"acme-books/models"
 )
@@ -17,11 +14,6 @@ import (
 type LibraryController struct{}
 
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -30,13 +22,9 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 		return
 	}
 
-	var book models.Book
-	key := datastore.IDKey("Book", int64(id), nil)
-
-	err = client.Get(ctx, key, &book)
+	book, err := models.FindBookById(id)
 
 	if err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -54,25 +42,14 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+	books, err := models.ListBooks()
 
-	defer client.Close()
-
-	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+	jsonStr, err := json.MarshalIndent(books, "", "  ")
 
 	if err != nil {
 		fmt.Println(err)
