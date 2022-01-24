@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/datastore"
-	"google.golang.org/api/iterator"
 )
 
 type Book struct {
@@ -55,15 +54,10 @@ func ListBooks() ([]Book, error) {
 
 	var books []Book
 
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		books = append(books, b)
+	_, err := client.GetAll(ctx, datastore.NewQuery("Book").Order("Id"), &books)
+
+	if err != nil {
+		return books, err
 	}
 
 	return books, nil
