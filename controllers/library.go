@@ -42,7 +42,14 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	books, err := models.ListBooks()
+	params := r.URL.Query()
+
+	filters := models.BookFilter{
+		Author: params.Get("author"),
+		Title: params.Get("title"),
+	}
+
+	books, err := models.ListBooks(filters)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

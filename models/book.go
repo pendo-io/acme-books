@@ -14,6 +14,11 @@ type Book struct {
 	Borrowed bool   `json:"borrowed"`
 }
 
+type BookFilter struct {
+	Author string
+	Title string
+}
+
 func BootstrapBooks() {
 	ctx := context.Background()
 
@@ -49,12 +54,22 @@ func FindBookById(id int) (Book, error) {
 	return book, nil
 }
 
-func ListBooks() ([]Book, error) {
+func ListBooks(filters BookFilter) ([]Book, error) {
 	ctx := context.Background()
 
 	var books []Book
 
-	_, err := client.GetAll(ctx, datastore.NewQuery("Book").Order("Id"), &books)
+	query := datastore.NewQuery("Book").Order("Id")
+
+	if filters.Author != "" {
+		query = query.Filter("Author=", filters.Author)
+	}
+
+	if filters.Title != "" {
+		query = query.Filter("Title=", filters.Title)
+	}
+
+	_, err := client.GetAll(ctx, query, &books)
 
 	if err != nil {
 		return books, err
