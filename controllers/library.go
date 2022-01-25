@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
 
 	"acme-books/models"
@@ -74,24 +75,66 @@ func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid id"))
 		return
 	}
 
-	book, err := models.BorrowBook(id)
+	book, err := models.FindBookById(id)
+
+	if book.Borrowed == true {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Book already borrowed"))
+		return
+	}
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
+	_, err = models.BorrowBook(book)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	jsonStr, err := json.MarshalIndent(book, "", "  ")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (lc LibraryController) Return(params martini.Params, w http.ResponseWriter) {
+	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
 		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid id"))
+		return
+	}
+
+	book, err := models.FindBookById(id)
+
+	if book.Borrowed == false {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Cannot return a book that is not borrowed"))
+		return
+	}
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
+	_, err = models.ReturnBook(book)
+
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	w.WriteHeader(http.StatusNoContent)
 }

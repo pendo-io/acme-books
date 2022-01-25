@@ -48,6 +48,10 @@ func FindBookById(id int) (Book, error) {
 
 	if err := client.Get(ctx, key, &book); err != nil {
 		fmt.Println(err)
+
+		if book.Id == 0 {
+			return Book{}, datastore.ErrNoSuchEntity
+		}
 		return Book{}, err
 	}
 
@@ -78,18 +82,29 @@ func ListBooks(filters BookFilter) ([]Book, error) {
 	return books, nil
 }
 
-func BorrowBook(id int) (Book, error) {
+func BorrowBook(book Book) (Book, error) {
 	ctx := context.Background()
-	book, err := FindBookById(id)
+
+	book.Borrowed = true
+
+	key := datastore.IDKey("Book", int64(book.Id), nil)
+	_, err := client.Put(ctx, key, &book)
 
 	if err != nil {
 		fmt.Println(err)
 		return book, err
 	}
 
-	book.Borrowed = true
-	key := datastore.IDKey("Book", int64(id), nil)
-	_, err = client.Put(ctx, key, &book)
+	return book, nil
+}
+
+func ReturnBook(book Book) (Book, error) {
+	ctx := context.Background()
+
+	book.Borrowed = false
+
+	key := datastore.IDKey("Book", int64(book.Id), nil)
+	_, err := client.Put(ctx, key, &book)
 
 	if err != nil {
 		fmt.Println(err)
