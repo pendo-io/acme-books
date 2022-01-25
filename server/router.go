@@ -2,8 +2,10 @@ package server
 
 import (
 	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 
 	"acme-books/controllers"
+	"acme-books/models"
 )
 
 func NewRouter() *martini.ClassicMartini {
@@ -15,6 +17,7 @@ func NewRouter() *martini.ClassicMartini {
 	router.Get("/books/:id", libraryController.GetByKey)
 	router.Put("/books/:id/borrow", libraryController.Borrow)
 	router.Put("/books/:id/return", libraryController.Return)
+	router.Post("/books", binding.Bind(models.Book{}), libraryController.CreateBook)
 
 	return router
 }

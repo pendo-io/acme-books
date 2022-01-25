@@ -69,6 +69,26 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 	w.Write(jsonStr)
 }
 
+func (lc LibraryController) CreateBook(book models.Book, r *http.Request, w http.ResponseWriter) {
+	book, err := models.AddBook(book)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	jsonStr, err := json.MarshalIndent(book, "", "  ")
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonStr)
+}
+
 func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
 

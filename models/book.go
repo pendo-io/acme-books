@@ -10,7 +10,7 @@ import (
 type Book struct {
 	Id       int64
 	Title    string `json:"title"`
-	Author   string `json:"writer"`
+	Author   string `json:"author"`
 	Borrowed bool   `json:"borrowed"`
 }
 
@@ -21,23 +21,16 @@ type BookFilter struct {
 
 func BootstrapBooks() {
 	ctx := context.Background()
-
-	books := []Book{
-		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
-		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
-		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
-		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
-	}
-
-	var keys []*datastore.Key
+	books, _ := ListBooks(BookFilter{})
 
 	for _, book := range books {
-		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
+		client.Delete(ctx, datastore.IDKey("Book", book.Id, nil))
 	}
 
-	if _, err := client.PutMulti(ctx, keys, books); err != nil {
-		fmt.Println(err)
-	}
+	AddBook(Book{Author: "George Orwell", Title: "1984"})
+	AddBook(Book{Author: "George Orwell", Title: "Animal Farm", Borrowed: false})
+	AddBook(Book{Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false})
+	AddBook(Book{Author: "Various", Title: "Collins Dictionary", Borrowed: false})
 }
 
 func FindBookById(id int) (Book, error) {
@@ -54,14 +47,32 @@ func FindBookById(id int) (Book, error) {
 		}
 		return Book{}, err
 	}
+	book.Id = key.ID
 
 	return book, nil
 }
 
-func ListBooks(filters BookFilter) ([]Book, error) {
+func AddBook(book Book) (Book, error) {
 	ctx := context.Background()
 
-	var books []Book
+	key := datastore.IncompleteKey("Book", nil)
+
+	key, err := client.Put(ctx, key, &book)
+
+	if err != nil {
+		fmt.Println(err)
+		return book, err
+	}
+
+	book.Id = key.ID
+
+	return book, nil
+}
+
+func ListBooks(filters BookFilter) ([]*Book, error) {
+	ctx := context.Background()
+
+	var books []*Book
 
 	query := datastore.NewQuery("Book").Order("Id")
 
@@ -73,10 +84,14 @@ func ListBooks(filters BookFilter) ([]Book, error) {
 		query = query.Filter("Title=", filters.Title)
 	}
 
-	_, err := client.GetAll(ctx, query, &books)
+	keys, err := client.GetAll(ctx, query, &books)
 
 	if err != nil {
-		return books, err
+		return nil, err
+	}
+
+	for i, key := range keys {
+		books[i].Id = key.ID
 	}
 
 	return books, nil
@@ -87,7 +102,7 @@ func BorrowBook(book Book) (Book, error) {
 
 	book.Borrowed = true
 
-	key := datastore.IDKey("Book", int64(book.Id), nil)
+	key := datastore.IDKey("Book", book.Id, nil)
 	_, err := client.Put(ctx, key, &book)
 
 	if err != nil {
@@ -103,7 +118,7 @@ func ReturnBook(book Book) (Book, error) {
 
 	book.Borrowed = false
 
-	key := datastore.IDKey("Book", int64(book.Id), nil)
+	key := datastore.IDKey("Book", book.Id, nil)
 	_, err := client.Put(ctx, key, &book)
 
 	if err != nil {
