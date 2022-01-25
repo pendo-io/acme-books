@@ -77,3 +77,24 @@ func ListBooks(filters BookFilter) ([]Book, error) {
 
 	return books, nil
 }
+
+func BorrowBook(id int) (Book, error) {
+	ctx := context.Background()
+	book, err := FindBookById(id)
+
+	if err != nil {
+		fmt.Println(err)
+		return book, err
+	}
+
+	book.Borrowed = true
+	key := datastore.IDKey("Book", int64(id), nil)
+	_, err = client.Put(ctx, key, &book)
+
+	if err != nil {
+		fmt.Println(err)
+		return book, err
+	}
+
+	return book, nil
+}
