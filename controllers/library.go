@@ -47,7 +47,7 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	filters := models.BookFilter{
 		Author: params.Get("author"),
-		Title: params.Get("title"),
+		Title:  params.Get("title"),
 	}
 
 	books, err := models.ListBooks(filters)

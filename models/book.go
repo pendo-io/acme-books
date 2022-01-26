@@ -16,7 +16,7 @@ type Book struct {
 
 type BookFilter struct {
 	Author string
-	Title string
+	Title  string
 }
 
 func BootstrapBooks() {
@@ -74,15 +74,7 @@ func ListBooks(filters BookFilter) ([]*Book, error) {
 
 	var books []*Book
 
-	query := datastore.NewQuery("Book").Order("Id")
-
-	if filters.Author != "" {
-		query = query.Filter("Author=", filters.Author)
-	}
-
-	if filters.Title != "" {
-		query = query.Filter("Title=", filters.Title)
-	}
+	query := buildBookQuery(filters)
 
 	keys, err := client.GetAll(ctx, query, &books)
 
@@ -98,25 +90,23 @@ func ListBooks(filters BookFilter) ([]*Book, error) {
 }
 
 func BorrowBook(book Book) (Book, error) {
-	ctx := context.Background()
-
 	book.Borrowed = true
 
-	key := datastore.IDKey("Book", book.Id, nil)
-	_, err := client.Put(ctx, key, &book)
-
-	if err != nil {
-		fmt.Println(err)
-		return book, err
-	}
+	book, _ = updateBook(book)
 
 	return book, nil
 }
 
 func ReturnBook(book Book) (Book, error) {
-	ctx := context.Background()
-
 	book.Borrowed = false
+
+	book, _ = updateBook(book)
+
+	return book, nil
+}
+
+func updateBook(book Book) (Book, error) {
+	ctx := context.Background()
 
 	key := datastore.IDKey("Book", book.Id, nil)
 	_, err := client.Put(ctx, key, &book)
@@ -126,5 +116,18 @@ func ReturnBook(book Book) (Book, error) {
 		return book, err
 	}
 
-	return book, nil
+	return book, err
+}
+
+func buildBookQuery(filters BookFilter) *datastore.Query {
+	query := datastore.NewQuery("Book").Order("Id")
+
+	if filters.Author != "" {
+		query = query.Filter("Author=", filters.Author)
+	}
+
+	if filters.Title != "" {
+		query = query.Filter("Title=", filters.Title)
+	}
+	return query
 }
