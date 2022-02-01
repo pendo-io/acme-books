@@ -1,6 +1,6 @@
 module acme-books
 
-go 1.14
+go 1.17
 
 require (
 	cloud.google.com/go/datastore v1.6.0
