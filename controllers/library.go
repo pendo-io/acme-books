@@ -16,12 +16,7 @@ import (
 
 type LibraryController struct{}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
+func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter, client *datastore.Client, ctx context.Context) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -53,12 +48,7 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 	w.Write(jsonStr)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
+func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, client *datastore.Client, ctx context.Context) {
 	var output []models.Book
 
 	it := client.Run(ctx, datastore.NewQuery("Book"))

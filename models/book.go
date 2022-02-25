@@ -6,3 +6,4 @@ type Book struct {
 	Author   string `json:"writer"`
 	Borrowed bool   `json:"borrowed"`
 }
+
