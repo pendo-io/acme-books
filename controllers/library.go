@@ -116,3 +116,22 @@ func (lc LibraryController) ReturnByKey(params martini.Params, w http.ResponseWr
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+func (lc LibraryController) CreateBook(w http.ResponseWriter, client *datastore.Client, ctx context.Context, bookBinding models.Book) {
+	key := datastore.IncompleteKey("Book", nil)
+	newKey, err := client.Put(ctx, key, &bookBinding)
+	if err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	bookBinding.Id = newKey.ID
+	if body, err := json.Marshal(bookBinding); err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		w.Write(body)
+		w.WriteHeader(http.StatusOK)
+	}
+}
