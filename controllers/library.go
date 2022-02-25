@@ -58,3 +58,61 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, clie
 		w.Write(jsonStr)
 	}
 }
+
+func (lc LibraryController) BorrowByKey(params martini.Params, w http.ResponseWriter, client *datastore.Client, ctx context.Context) {
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var book models.Book
+	key := datastore.IDKey("Book", int64(id), nil)
+
+	err = client.Get(ctx, key, &book)
+
+	if book.Borrowed {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		book.Borrowed = true
+	}
+
+	if 	_, err = client.Put(ctx, key, &book); err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (lc LibraryController) ReturnByKey(params martini.Params, w http.ResponseWriter, client *datastore.Client, ctx context.Context) {
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var book models.Book
+	key := datastore.IDKey("Book", int64(id), nil)
+
+	err = client.Get(ctx, key, &book)
+
+	if !book.Borrowed {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		book.Borrowed = false
+	}
+
+	if 	_, err = client.Put(ctx, key, &book); err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
