@@ -47,18 +47,14 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, client *datastore.Client, ctx context.Context) {
-	var output []models.Book
-
-	_, err := client.GetAll(ctx, datastore.NewQuery("Book").Order("Id"), &output)
-
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
+	if output, err := models.ListBooks(client, ctx,"Id", r.URL.Query()); err != nil {
+		fmt.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+	} else if jsonStr, err := json.MarshalIndent(output, "", "  "); err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonStr)
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
 }
