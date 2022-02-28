@@ -14,14 +14,33 @@ import (
 	"acme-books/models"
 )
 
-type LibraryController struct{}
+type LibraryController struct {
+	client *datastore.Client
+	ctx    context.Context
+}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+func NewLibrary(client *datastore.Client, ctx context.Context, books []models.Book) (*LibraryController, error) {
+	lc := LibraryController{client, ctx}
+	if err := lc.bootstrapBooks(books); err != nil {
+		fmt.Println("Problem bootstrapping library: %s", err)
+		return nil, err
+	}
+	return &lc, nil
+}
 
-	defer client.Close()
+func (lc LibraryController) bootstrapBooks(books []models.Book) error {
+	var keys []*datastore.Key
 
+	for _, book := range books {
+		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
+	}
+
+	_, err := lc.client.PutMulti(lc.ctx, keys, books)
+
+	return err
+}
+
+func (lc LibraryController) GetByKey(w http.ResponseWriter, params martini.Params) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -33,7 +52,7 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 	var book models.Book
 	key := datastore.IDKey("Book", int64(id), nil)
 
-	err = client.Get(ctx, key, &book)
+	err = lc.client.Get(lc.ctx, key, &book)
 
 	if err != nil {
 		fmt.Println(err)
@@ -53,15 +72,10 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 	w.Write(jsonStr)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
+func (lc LibraryController) ListAll(w http.ResponseWriter, r *http.Request) {
 	var output []models.Book
 
-	it := client.Run(ctx, datastore.NewQuery("Book"))
+	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
