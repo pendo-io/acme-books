@@ -9,77 +9,52 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
 
 	"acme-books/models"
 )
 
 type LibraryController struct{}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
+func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
 
 	id, err := strconv.Atoi(params["id"])
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	writeError(err, http.StatusBadRequest, w)
 
 	var book models.Book
 	key := datastore.IDKey("Book", int64(id), nil)
 
 	err = client.Get(ctx, key, &book)
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	writeError(err, http.StatusInternalServerError, w)
 
 	jsonStr, err := json.MarshalIndent(book, "", "  ")
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	writeError(err, http.StatusInternalServerError, w)
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	writeResponse(jsonStr, w)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
 
-	defer client.Close()
-
-	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
-	}
+	output := models.GetAllBooks(client, ctx)
 
 	jsonStr, err := json.MarshalIndent(output, "", "  ")
 
+	writeError(err, http.StatusInternalServerError, w)
+
+	writeResponse(jsonStr, w)
+}
+
+func writeError(err error, status int, w http.ResponseWriter) {
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(status)
 		return
 	}
+}
 
+func writeResponse(resp []byte, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	w.Write(resp)
 }
