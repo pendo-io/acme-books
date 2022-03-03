@@ -1,6 +1,7 @@
 package models
 
 import (
+	"acme-books/helpers"
 	"context"
 	"fmt"
 	"net/url"
@@ -43,7 +44,6 @@ func GetSingleBook(client *datastore.Client, ctx context.Context, id int) (Book,
 func createQuery(filters url.Values) *datastore.Query {
 	if len(filters) > 0 {
 		if author := filters.Get("author"); author != "" {
-			fmt.Println(author)
 			return datastore.NewQuery("Book").Filter("Author=", author).Order("Id")
 		}
 		if title := filters.Get("title"); title != "" {
@@ -54,4 +54,36 @@ func createQuery(filters url.Values) *datastore.Query {
 		}
 	}
 	return datastore.NewQuery("Book").Order("Id")
+}
+
+func BorrowBook(client *datastore.Client, ctx context.Context, id int) (Book, error) {
+	var book Book
+	key := datastore.IDKey("Book", int64(id), nil)
+
+	err := client.Get(ctx, key, &book)
+	if err != nil {
+		return book, err
+	}
+	if book.Borrowed == true {
+		return book, &helpers.BoorrowError{"The requested book has already been borrowed"}
+	}
+	book.Borrowed = true
+	_, err = client.Put(ctx, key, &book)
+	return book, err
+}
+
+func ReturnBook(client *datastore.Client, ctx context.Context, id int) (Book, error) {
+	var book Book
+	key := datastore.IDKey("Book", int64(id), nil)
+
+	err := client.Get(ctx, key, &book)
+	if err != nil {
+		return book, err
+	}
+	if book.Borrowed == false {
+		return book, &helpers.ReturnBookError{"The requested book has never been borrowed"}
+	}
+	book.Borrowed = false
+	_, err = client.Put(ctx, key, &book)
+	return book, err
 }
