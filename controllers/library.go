@@ -17,41 +17,47 @@ type LibraryController struct{}
 
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
 
+	fmt.Println(params)
 	id, err := strconv.Atoi(params["id"])
 
-	writeError(err, http.StatusBadRequest, w)
+	if err != nil {
+		writeError(err, http.StatusBadRequest, w)
+		return
+	}
 
-	var book models.Book
-	key := datastore.IDKey("Book", int64(id), nil)
+	book, err := models.GetSingleBook(client, ctx, id)
 
-	err = client.Get(ctx, key, &book)
-
-	writeError(err, http.StatusInternalServerError, w)
+	if err != nil {
+		writeError(err, http.StatusInternalServerError, w)
+		return
+	}
 
 	jsonStr, err := json.MarshalIndent(book, "", "  ")
 
-	writeError(err, http.StatusInternalServerError, w)
+	if err != nil {
+		writeError(err, http.StatusInternalServerError, w)
+		return
+	}
 
 	writeResponse(jsonStr, w)
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
-
-	output := models.GetAllBooks(client, ctx)
+	filters := r.URL.Query()
+	output := models.GetAllBooks(filters, client, ctx)
 
 	jsonStr, err := json.MarshalIndent(output, "", "  ")
 
-	writeError(err, http.StatusInternalServerError, w)
-
+	if err != nil {
+		writeError(err, http.StatusInternalServerError, w)
+		return
+	}
 	writeResponse(jsonStr, w)
 }
 
 func writeError(err error, status int, w http.ResponseWriter) {
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(status)
-		return
-	}
+	fmt.Println(err)
+	w.WriteHeader(status)
 }
 
 func writeResponse(resp []byte, w http.ResponseWriter) {

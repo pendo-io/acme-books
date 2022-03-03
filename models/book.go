@@ -3,7 +3,7 @@ package models
 import (
 	"context"
 	"fmt"
-	"sort"
+	"net/url"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
@@ -16,9 +16,9 @@ type Book struct {
 	Borrowed bool   `json:"borrowed"`
 }
 
-func GetAllBooks(client *datastore.Client, ctx context.Context) []Book {
+func GetAllBooks(filters url.Values, client *datastore.Client, ctx context.Context) []Book {
 	var output []Book
-	it := client.Run(ctx, datastore.NewQuery("Book"))
+	it := client.Run(ctx, createQuery(filters))
 	for {
 		var b Book
 		_, err := it.Next(&b)
@@ -29,13 +29,29 @@ func GetAllBooks(client *datastore.Client, ctx context.Context) []Book {
 		output = append(output, b)
 	}
 
-	sort.Sort(ById(output))
 	return output
 }
 
-// Implementing the sort.Interface interface
-type ById []Book
+func GetSingleBook(client *datastore.Client, ctx context.Context, id int) (Book, error) {
+	var book Book
+	key := datastore.IDKey("Book", int64(id), nil)
 
-func (b ById) Len() int           { return len(b) }
-func (b ById) Less(i, j int) bool { return b[i].Id < b[j].Id }
-func (b ById) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+	err := client.Get(ctx, key, &book)
+	return book, err
+}
+
+func createQuery(filters url.Values) *datastore.Query {
+	if len(filters) > 0 {
+		if author := filters.Get("author"); author != "" {
+			fmt.Println(author)
+			return datastore.NewQuery("Book").Filter("Author=", author).Order("Id")
+		}
+		if title := filters.Get("title"); title != "" {
+			return datastore.NewQuery("Book").Filter("Title=", title).Order("Id")
+		}
+		if borrowed := filters.Get("borrowed"); borrowed != "" {
+			return datastore.NewQuery("Book").Filter("Borrowed=", (borrowed == "true")).Order("Id")
+		}
+	}
+	return datastore.NewQuery("Book").Order("Id")
+}
