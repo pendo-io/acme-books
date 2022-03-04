@@ -24,9 +24,7 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 
 	id, err := strconv.Atoi(params["id"])
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if CheckError(err, http.StatusBadRequest, w) {
 		return
 	}
 
@@ -35,22 +33,17 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 
 	err = client.Get(ctx, key, &book)
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	if CheckError(err, http.StatusInternalServerError, w) {
 		return
 	}
 
 	jsonStr, err := json.MarshalIndent(book, "", "  ")
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	if CheckError(err, http.StatusInternalServerError, w) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	PostResponse(jsonStr, w)
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
@@ -74,12 +67,24 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	jsonStr, err := json.MarshalIndent(output, "", "  ")
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	if CheckError(err, http.StatusInternalServerError, w) {
 		return
 	}
 
+	PostResponse(jsonStr, w)
+}
+
+func CheckError(err error, statuscode int, w http.ResponseWriter) bool {
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(statuscode)
+		return true
+	}
+	return false
+}
+
+func PostResponse(jsonStr []byte, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
+	return
 }
