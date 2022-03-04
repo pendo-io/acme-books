@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
@@ -73,27 +74,44 @@ func (lc LibraryController) GetByKey(w http.ResponseWriter, params martini.Param
 }
 
 func (lc LibraryController) ListAll(w http.ResponseWriter, r *http.Request) {
-	var output []models.Book
+	var (
+		output []models.Book
+		query  *datastore.Query
+	)
 
-	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
-	}
-
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	r.ParseForm()
+	switch sortBy := r.Form.Get("sort"); sortBy {
+	case "author", "title":
+		query = datastore.NewQuery("Book").Order(strings.Title(sortBy))
+	case "", "id":
+		query = datastore.NewQuery("Book").Order("Id")
+	default:
+		fmt.Printf("Unknown sorting field: %s\n", sortBy)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	it := lc.client.Run(lc.ctx, query)
+	for {
+		var b models.Book
+		if _, err := it.Next(&b); err == iterator.Done {
+			fmt.Println(err)
+			break
+		} else if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		} else {
+			output = append(output, b)
+		}
+	}
+
+	if jsonStr, err := json.MarshalIndent(output, "", "  "); err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonStr)
+	}
 }
