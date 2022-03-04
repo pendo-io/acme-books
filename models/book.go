@@ -56,6 +56,14 @@ func createQuery(filters url.Values) *datastore.Query {
 	return datastore.NewQuery("Book").Order("Id")
 }
 
+func CreateBook(client *datastore.Client, ctx context.Context, book Book) (Book, error) {
+	key := datastore.IncompleteKey("Book", nil)
+
+	newId, err := client.Put(ctx, key, &book)
+	book.Id = newId.ID
+	return book, err
+}
+
 func BorrowBook(client *datastore.Client, ctx context.Context, id int) (Book, error) {
 	var book Book
 	key := datastore.IDKey("Book", int64(id), nil)

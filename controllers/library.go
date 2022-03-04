@@ -5,6 +5,7 @@ import (
 	"acme-books/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,6 +15,42 @@ import (
 )
 
 type LibraryController struct{}
+
+func (lc LibraryController) Create(r *http.Request, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
+
+	author := r.FormValue("author")
+	if author == "" {
+		err := errors.New("author parameter is missing")
+		writeError(err, http.StatusBadRequest, w)
+		return
+	}
+
+	title := r.FormValue("title")
+	if title == "" {
+		err := errors.New("title parameter is missing")
+		writeError(err, http.StatusBadRequest, w)
+		return
+	}
+
+	var book models.Book
+	book.Author = author
+	book.Title = title
+	book.Borrowed = false
+	book, err := models.CreateBook(client, ctx, book)
+	if err != nil {
+		writeError(err, http.StatusBadRequest, w)
+		return
+	}
+
+	jsonStr, err := json.MarshalIndent(book, "", "  ")
+
+	if err != nil {
+		writeError(err, http.StatusInternalServerError, w)
+		return
+	}
+
+	writeResponse(jsonStr, w)
+}
 
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter, ctx context.Context, client *datastore.Client) {
 

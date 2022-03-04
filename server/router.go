@@ -20,5 +20,6 @@ func NewRouter(ctx context.Context, client *datastore.Client) *martini.ClassicMa
 	router.Get("/books/:id", libraryController.GetByKey)
 	router.Put("/books/:id/borrow", libraryController.BorrowBook)
 	router.Put("/books/:id/return", libraryController.ReturnBook)
+	router.Post("/book", libraryController.Create)
 	return router
 }
