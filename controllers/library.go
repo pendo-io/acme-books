@@ -54,7 +54,7 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	var output []models.Book
 
-	it := client.Run(ctx, datastore.NewQuery("Book"))
+	it := client.Run(ctx, datastore.NewQuery("Book").Order("Id"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
