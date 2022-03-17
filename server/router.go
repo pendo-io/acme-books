@@ -4,6 +4,7 @@ import (
 	"github.com/go-martini/martini"
 
 	"acme-books/controllers"
+	"acme-books/models"
 )
 
 func NewRouter() *martini.ClassicMartini {
@@ -11,8 +12,20 @@ func NewRouter() *martini.ClassicMartini {
 
 	router := martini.Classic()
 
-	router.Get("/books", libraryController.ListAll)
-	router.Get("/books/:id", libraryController.GetByKey)
+	router.Get("/books", initBookInterface, libraryController.ListAll, closeClientConnection)
+	router.Get("/books/:id", initBookInterface, libraryController.GetByKey, closeClientConnection)
+	router.Put("/books/:id/borrow", initBookInterface, libraryController.Borrow, closeClientConnection)
+	router.Put("/books/:id/return", initBookInterface, libraryController.Return, closeClientConnection)
+	router.Post("/book", initBookInterface, libraryController.Create, closeClientConnection)
 
 	return router
+}
+
+func initBookInterface(c martini.Context) {
+	bookInt := models.NewBookImplementation()
+	c.Map(bookInt)
+}
+
+func closeClientConnection(c martini.Context, bookInt models.BookInterface) {
+	defer bookInt.CloseClientConnection()
 }
