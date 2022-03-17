@@ -12,21 +12,17 @@ import (
 	"google.golang.org/api/iterator"
 
 	"acme-books/models"
+	"acme-books/utils"
 )
 
 type LibraryController struct{}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
 
-	defer client.Close()
-
+func (lc LibraryController) GetByKey(client *datastore.Client , ctx context.Context, params martini.Params, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+		utils.ErrorResponse(w,http.StatusBadRequest, err)
 		return
 	}
 
@@ -36,28 +32,21 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 	err = client.Get(ctx, key, &book)
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w,http.StatusInternalServerError, err)
 		return
 	}
 
 	jsonStr, err := json.MarshalIndent(book, "", "  ")
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w,http.StatusInternalServerError, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	utils.OKResponse(w,jsonStr)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
+func (lc LibraryController) ListAll(client *datastore.Client , ctx context.Context, r *http.Request, w http.ResponseWriter) {
 
 	var output []models.Book
 
@@ -75,11 +64,9 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 	jsonStr, err := json.MarshalIndent(output, "", "  ")
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w,http.StatusInternalServerError, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	utils.OKResponse(w, jsonStr)
 }

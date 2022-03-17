@@ -24,8 +24,10 @@ func main() {
 
 	host := getEnvWithDefault("HOST", "localhost")
 	port := getEnvWithDefault("PORT", "3030")
+	client, ctx := initialise()
+	defer client.Close()
 
-	server.Init(host, port)
+	server.Init(host, port, client, ctx)
 }
 
 func getEnvWithDefault(key, fallback string) string {
@@ -36,9 +38,7 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks() {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
+	client, ctx := initialise()
 	defer client.Close()
 
 	books := []models.Book{
@@ -57,4 +57,10 @@ func bootstrapBooks() {
 	if _, err := client.PutMulti(ctx, keys, books); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func initialise() (*datastore.Client, context.Context) {
+	ctx := context.Background()
+	client, _ := datastore.NewClient(ctx, "acme-books")
+	return client, ctx
 }
