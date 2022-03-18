@@ -37,6 +37,24 @@ func (brds *BookRepositoryDataStore) GetBooks(ctx context.Context, filters map[s
 	return createBooks(it)
 }
 
+func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow bool) (err error){
+	key := datastore.IDKey("Book", int64(id), nil)
+	book := new(models.Book)
+	if err = brds.client.Get(ctx, key, book); err!=nil{
+		return err
+	}
+	if(book.Borrowed){
+		return  &BorrowedError{}
+	}
+	book.Borrowed = borrow
+
+	if _, err := brds.client.Put(ctx, key, book); err != nil {
+		return err
+	}
+	return
+}
+
+
 func createBooks(it *datastore.Iterator) (books []models.Book){
 	for {
 		var b models.Book

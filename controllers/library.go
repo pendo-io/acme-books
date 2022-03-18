@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -22,7 +21,6 @@ type LibraryController struct{
 
 func (lc LibraryController) GetByKey(repository repository.BookRepository, ctx context.Context, params martini.Params, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
-	fmt.Println(params)
 
 	if err != nil {
 		utils.ErrorResponse(w,http.StatusBadRequest, err)
@@ -70,4 +68,41 @@ func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.
 	}
 
 	utils.OKResponse(w, jsonStr)
+}
+
+func (lc LibraryController) Borrow(repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter, params martini.Params) {
+
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		utils.ErrorResponse(w,http.StatusBadRequest, err)
+		return
+	}
+	err = repo.Lending(ctx, id, true)
+	if err !=nil{
+		switch e:=err.(type){
+		case *repository.BorrowedError:
+			utils.ErrorResponse(w,http.StatusBadRequest, e)
+		default:
+			utils.ErrorResponse(w,http.StatusInternalServerError, e)
+		}
+
+	}
+		w.WriteHeader(http.StatusNoContent)
+}
+
+
+func (lc LibraryController) Return(repo repository.BookRepository, ctx context.Context, r *http.Request,
+		w http.ResponseWriter, params martini.Params) {
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		utils.ErrorResponse(w,http.StatusBadRequest, err)
+		return
+	}
+	err = repo.Lending(ctx, id, false)
+	if err !=nil{
+		utils.ErrorResponse(w,http.StatusInternalServerError, err)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
