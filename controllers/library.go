@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/go-martini/martini"
 
+	"acme-books/models"
 	"acme-books/repository"
 	"acme-books/utils"
 )
@@ -41,10 +43,15 @@ func (lc LibraryController) GetByKey(repository repository.BookRepository, ctx c
 	utils.OKResponse(w,jsonStr)
 }
 
-func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.Context, r *http.Request, w http.ResponseWriter) {
+func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter) {
+	var books []models.Book
 
-	output, _ := repo.GetBooks(ctx)
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+	books, _ = repo.GetBooks(ctx)
+
+	sort.Slice(books, func(i, j int) bool {return books[i].Id < books[j].Id})
+
+	jsonStr, err := json.MarshalIndent(books, "", "  ")
 
 	if err != nil {
 		utils.ErrorResponse(w,http.StatusInternalServerError, err)
