@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -21,6 +22,7 @@ type LibraryController struct{
 
 func (lc LibraryController) GetByKey(repository repository.BookRepository, ctx context.Context, params martini.Params, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
+	fmt.Println(params)
 
 	if err != nil {
 		utils.ErrorResponse(w,http.StatusBadRequest, err)
@@ -45,9 +47,15 @@ func (lc LibraryController) GetByKey(repository repository.BookRepository, ctx c
 
 func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.Context, r *http.Request,
 	w http.ResponseWriter) {
+	qs := r.URL.Query()
 	var books []models.Book
 
-	books, _ = repo.GetBooks(ctx)
+	if title:= qs.Get("title"); title!="" {
+		fmt.Println(title)
+		books = repo.GetBooksByTitle(ctx,title)
+	}else{
+		books = repo.GetBooks(ctx)
+	}
 
 	sort.Slice(books, func(i, j int) bool {return books[i].Id < books[j].Id})
 

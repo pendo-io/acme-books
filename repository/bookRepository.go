@@ -7,6 +7,7 @@ import (
 type BookRepository interface {
 
 	GetBook(ctx context.Context, id int)(models.Book, error)
-	GetBooks(ctx context.Context)([]models.Book, error)
+	GetBooks(ctx context.Context)([]models.Book)
+	GetBooksByTitle(ctx context.Context,title string)([]models.Book)
 
 }
