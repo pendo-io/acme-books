@@ -4,6 +4,7 @@ import (
 	"acme-books/models"
 	"context"
 	"fmt"
+	"strings"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
@@ -29,15 +30,9 @@ func (brds *BookRepositoryDataStore) GetBook(ctx context.Context, id int)(book m
 	return book, err
 }
 
-func (brds *BookRepositoryDataStore) GetBooks(ctx context.Context)([]models.Book){
+func (brds *BookRepositoryDataStore) GetBooks(ctx context.Context, filters map[string]string)([]models.Book){
 
-	it := brds.client.Run(ctx, datastore.NewQuery("Book"))
-	return createBooks(it)
-}
-
-func (brds *BookRepositoryDataStore) GetBooksByTitle(ctx context.Context, title string)([]models.Book){
-
-	query := datastore.NewQuery("Book").Filter("Title =", title)
+	query := buildQuery(filters )
 	it := brds.client.Run(ctx, query)
 	return createBooks(it)
 }
@@ -55,4 +50,16 @@ func createBooks(it *datastore.Iterator) (books []models.Book){
 	return books
 }
 
+func buildQuery(filters map[string]string) *datastore.Query{
+	query := datastore.NewQuery("Book")
+	for filter, value := range  filters {
+		if strings.EqualFold("title", filter){
+			query = query.Filter("Title=",value)
+		}
+		if strings.EqualFold("Author", filter){
+			query = query.Filter("Author=",value)
+		}
+	}
+	return query
+}
 

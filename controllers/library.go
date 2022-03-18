@@ -49,13 +49,16 @@ func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.
 	w http.ResponseWriter) {
 	qs := r.URL.Query()
 	var books []models.Book
+	var filters map[string]string = make(map[string]string)
 
-	if title:= qs.Get("title"); title!="" {
-		fmt.Println(title)
-		books = repo.GetBooksByTitle(ctx,title)
-	}else{
-		books = repo.GetBooks(ctx)
+	if qs.Has("title"){
+		filters["Title"]=qs.Get("title")
 	}
+	if qs.Has("author"){
+		filters["Author"]=qs.Get("author")
+	}
+
+	books = repo.GetBooks(ctx,filters)
 
 	sort.Slice(books, func(i, j int) bool {return books[i].Id < books[j].Id})
 
