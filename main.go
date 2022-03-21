@@ -20,11 +20,10 @@ func main() {
 		log.Fatal("Error loading .env file! Did you forget to run `gcloud beta emulators datastore env-init > .env`")
 	}
 
-	bootstrapBooks()
-
 	host := getEnvWithDefault("HOST", "localhost")
 	port := getEnvWithDefault("PORT", "3030")
 	client, ctx := initialise()
+	bootstrapBooks(client, ctx)
 	defer client.Close()
 
 	server.Init(host, port, client, ctx)
@@ -37,10 +36,7 @@ func getEnvWithDefault(key, fallback string) string {
 	return fallback
 }
 
-func bootstrapBooks() {
-	client, ctx := initialise()
-	defer client.Close()
-
+func bootstrapBooks(client *datastore.Client, ctx context.Context) {
 	books := []models.Book{
 		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
 		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},

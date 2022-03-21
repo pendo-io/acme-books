@@ -7,15 +7,15 @@ import (
 	"strconv"
 )
 
-func OKResponse(w http.ResponseWriter, jsonStr []byte){
+func OKResponse(w http.ResponseWriter, jsonStr []byte) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
 }
 
-func ErrorResponse(w http.ResponseWriter, err error){
-	if err !=nil{
+func ErrorResponse(w http.ResponseWriter, err error) {
+	if err != nil {
 		fmt.Println(err)
-		switch err.(type){
+		switch err.(type) {
 		case *repository.BorrowedError, *strconv.NumError, *repository.ReturnedError:
 			w.WriteHeader(http.StatusBadRequest)
 

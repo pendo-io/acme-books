@@ -10,11 +10,11 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-type BookRepositoryDataStore struct{
+type BookRepositoryDataStore struct {
 	client *datastore.Client
 }
 
-func NewBookRepositoryDataStore(client *datastore.Client) *BookRepositoryDataStore{
+func NewBookRepositoryDataStore(client *datastore.Client) *BookRepositoryDataStore {
 	if client == nil {
 		panic("missing client")
 	}
@@ -22,7 +22,7 @@ func NewBookRepositoryDataStore(client *datastore.Client) *BookRepositoryDataSto
 	return &BookRepositoryDataStore{client: client}
 }
 
-func (brds *BookRepositoryDataStore) GetBook(ctx context.Context, id int)(book models.Book, err error){
+func (brds *BookRepositoryDataStore) GetBook(ctx context.Context, id int) (book models.Book, err error) {
 
 	key := datastore.IDKey("Book", int64(id), nil)
 	err = brds.client.Get(ctx, key, &book)
@@ -30,24 +30,24 @@ func (brds *BookRepositoryDataStore) GetBook(ctx context.Context, id int)(book m
 	return book, err
 }
 
-func (brds *BookRepositoryDataStore) GetBooks(ctx context.Context, filters map[string]string)([]models.Book){
+func (brds *BookRepositoryDataStore) GetBooks(ctx context.Context, filters map[string]string) []models.Book {
 
-	query := buildQuery(filters )
+	query := buildQuery(filters)
 	it := brds.client.Run(ctx, query)
 	return createBooks(it)
 }
 
-func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow bool) (err error){
+func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow bool) (err error) {
 	key := datastore.IDKey("Book", int64(id), nil)
 	book := new(models.Book)
-	if err = brds.client.Get(ctx, key, book); err!=nil{
+	if err = brds.client.Get(ctx, key, book); err != nil {
 		return err
 	}
-	if(borrow && book.Borrowed){
-		return  &BorrowedError{}
+	if borrow && book.Borrowed {
+		return &BorrowedError{}
 	}
-	if(!borrow && !book.Borrowed){
-		return  &ReturnedError{}
+	if !borrow && !book.Borrowed {
+		return &ReturnedError{}
 	}
 	book.Borrowed = borrow
 
@@ -57,8 +57,23 @@ func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow
 	return
 }
 
+func (brds *BookRepositoryDataStore) AddBook(ctx context.Context, book models.Book) (id int, err error) {
+	key := datastore.IncompleteKey("Book", nil)
+	//this is dirty, but if book id and DS Id are the same
+	key, err = brds.client.Put(ctx, key, &book)
+	if err != nil {
+		return 0, err
+	}
+	book.Id = key.ID
+	_, err = brds.client.Put(ctx, key, &book)
+	if err != nil {
+		return 0, err
+	}
+	return int(book.Id), err
 
-func createBooks(it *datastore.Iterator) (books []models.Book){
+}
+
+func createBooks(it *datastore.Iterator) (books []models.Book) {
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
@@ -71,16 +86,15 @@ func createBooks(it *datastore.Iterator) (books []models.Book){
 	return books
 }
 
-func buildQuery(filters map[string]string) *datastore.Query{
+func buildQuery(filters map[string]string) *datastore.Query {
 	query := datastore.NewQuery("Book")
-	for filter, value := range  filters {
-		if strings.EqualFold("title", filter){
-			query = query.Filter("Title=",value)
+	for filter, value := range filters {
+		if strings.EqualFold("title", filter) {
+			query = query.Filter("Title=", value)
 		}
-		if strings.EqualFold("Author", filter){
-			query = query.Filter("Author=",value)
+		if strings.EqualFold("Author", filter) {
+			query = query.Filter("Author=", value)
 		}
 	}
 	return query
 }
-
