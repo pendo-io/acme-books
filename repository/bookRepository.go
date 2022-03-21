@@ -10,4 +10,5 @@ type BookRepository interface {
 	GetBooks(ctx context.Context, filters map[string]string) []models.Book
 	Lending(ctx context.Context, id int, borrow bool) (err error)
 	AddBook(ctx context.Context, book models.Book) (int, error)
+	DeleteBook(ctx context.Context, id int) (error)
 }

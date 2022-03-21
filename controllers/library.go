@@ -109,3 +109,17 @@ func (lc LibraryController) AddBook(book models.Book, repo repository.BookReposi
 	jsonStr, _ := json.MarshalIndent(id, "", "  ")
 	utils.OKResponse(w, jsonStr)
 }
+
+func(lc LibraryController) DeleteBook(repo repository.BookRepository, ctx context.Context, params martini.Params, w http.ResponseWriter) {
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+
+	if err := repo.DeleteBook(ctx, id); err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+
+}

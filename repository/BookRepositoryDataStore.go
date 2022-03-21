@@ -60,6 +60,7 @@ func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow
 func (brds *BookRepositoryDataStore) AddBook(ctx context.Context, book models.Book) (id int, err error) {
 	key := datastore.IncompleteKey("Book", nil)
 	//this is dirty, but if book id and DS Id are the same
+
 	key, err = brds.client.Put(ctx, key, &book)
 	if err != nil {
 		return 0, err
@@ -71,6 +72,12 @@ func (brds *BookRepositoryDataStore) AddBook(ctx context.Context, book models.Bo
 	}
 	return int(book.Id), err
 
+}
+
+func (brds *BookRepositoryDataStore) DeleteBook(ctx context.Context, id int) (err error) {
+	key := datastore.IDKey("Book", int64(id), nil)
+	err = brds.client.Delete(ctx, key)
+	return
 }
 
 func createBooks(it *datastore.Iterator) (books []models.Book) {
@@ -85,6 +92,8 @@ func createBooks(it *datastore.Iterator) (books []models.Book) {
 	}
 	return books
 }
+
+
 
 func buildQuery(filters map[string]string) *datastore.Query {
 	query := datastore.NewQuery("Book")
