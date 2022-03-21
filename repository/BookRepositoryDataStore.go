@@ -43,8 +43,11 @@ func (brds *BookRepositoryDataStore) Lending(ctx context.Context, id int, borrow
 	if err = brds.client.Get(ctx, key, book); err!=nil{
 		return err
 	}
-	if(book.Borrowed){
+	if(borrow && book.Borrowed){
 		return  &BorrowedError{}
+	}
+	if(!borrow && !book.Borrowed){
+		return  &ReturnedError{}
 	}
 	book.Borrowed = borrow
 
