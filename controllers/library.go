@@ -119,3 +119,18 @@ func (lc LibraryController) BorrowOrReturn(borrow bool) martini.Handler {
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+func (lc LibraryController) AddBook(w http.ResponseWriter, book models.Book) {
+	if newbook, err := lc.bi.NewBook(book); err != nil {
+		fmt.Println("Error adding book: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else if jsonStr, err := json.MarshalIndent(newbook, "", "  "); err != nil {
+		fmt.Println("Error serializing: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonStr)
+	}
+}

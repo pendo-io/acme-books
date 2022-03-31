@@ -9,8 +9,8 @@ import (
 
 type Book struct {
 	Id       int64
-	Title    string `json:"title"`
-	Author   string `json:"writer"`
+	Title    string `json:"title" binding:"required"`
+	Author   string `json:"writer" binding:"required"`
 	Borrowed bool   `json:"borrowed"`
 }
 
@@ -68,10 +68,23 @@ func (bi BookInt) PutBooks(books []Book) error {
 	}
 
 	_, err := bi.client.PutMulti(bi.ctx, keys, books)
-
 	return err
 }
 
 func (bi BookInt) PutBook(book Book) error {
 	return bi.PutBooks([]Book{book})
+}
+
+func (bi BookInt) NewBook(book Book) (Book, error) {
+	q := datastore.NewQuery("Book")
+	if n, err := bi.client.Count(bi.ctx, q); err != nil {
+		return Book{}, err
+	} else {
+		book.Id = int64(n) + 1
+	}
+	if err := bi.PutBook(book); err != nil {
+		return Book{}, err
+	} else {
+		return book, nil
+	}
 }
