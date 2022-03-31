@@ -82,3 +82,40 @@ func (lc LibraryController) List(w http.ResponseWriter, r *http.Request) {
 		w.Write(jsonStr)
 	}
 }
+
+// Return a handler to borrow or return a book.  TODO: sanitize inputs
+func (lc LibraryController) BorrowOrReturn(borrow bool) martini.Handler {
+	return func(w http.ResponseWriter, params martini.Params) {
+		var book models.Book
+
+		state := "return"
+		if borrow {
+			state = "borrow"
+		}
+		if id, err := strconv.Atoi(params["id"]); err != nil {
+			fmt.Println("Bad id: ", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else if book, err = lc.bi.GetBookByKey(int64(id)); err == datastore.ErrNoSuchEntity {
+			fmt.Println("Book not found: ", id)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else if err != nil {
+			fmt.Println("Error getting book: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		} else if book.Borrowed == borrow {
+			fmt.Printf("Book already %sed: %d\n", state, id)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		book.Borrowed = borrow
+		if err := lc.bi.PutBook(book); err != nil {
+			fmt.Printf("Error %sing book: %s\n", state, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Printf("Book %sed: %d\n", state, book.Id)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}

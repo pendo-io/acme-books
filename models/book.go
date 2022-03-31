@@ -71,3 +71,7 @@ func (bi BookInt) PutBooks(books []Book) error {
 
 	return err
 }
+
+func (bi BookInt) PutBook(book Book) error {
+	return bi.PutBooks([]Book{book})
+}
