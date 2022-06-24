@@ -5,6 +5,12 @@
 docker compose up
 ```
 
+&nbsp;&nbsp;&nbsp;&nbsp;**Note:** For Mac M1, if you have trouble with the amd64 `singularities/datastore-emulator` docker image, running the datastore emulator locally could be an option:
+```
+gcloud components install cloud-datastore-emulator
+gcloud beta emulators datastore start --project=acme-books --host-port=localhost:3031
+```
+
 2. Start the server
 ```
 go run .
