@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -77,6 +78,58 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonStr)
+}
+
+func (lc LibraryController) PostBook(r *http.Request, w http.ResponseWriter) {
+	ctx := context.Background()
+	client, _ := datastore.NewClient(ctx, "acme-books")
+
+	defer client.Close()
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error reading POST JSON body"))
+		return
+	}
+
+	book := models.Book{}
+	err = json.Unmarshal(body, &book)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Error parsing POST JSON into a Book: %s", string(body))))
+		return
+	}
+
+	// Get the next ID
+	count, err := client.Count(ctx, datastore.NewQuery("Book"))
+
+	book.Id = int64(count) + 1
+	key := datastore.Key{Kind: "Book", ID: book.Id}
+	returnKey, err := client.Put(ctx, &key, &book)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error storing Book to datastore with key: %v", key)))
+		return
+	}
+
+	if returnKey.ID != key.ID {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Mismatch in stored key: %v != %v", key, returnKey)))
+		return
+	}
+
+	book.Id = returnKey.ID
+	jsonStr, err := json.MarshalIndent(book, "", "  ")
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error marshaling book into JSON: %v", book)))
 		return
 	}
 
