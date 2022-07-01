@@ -3,83 +3,123 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 
-	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
 
 	"acme-books/models"
+	"acme-books/repository"
+	"acme-books/utils"
 )
 
-type LibraryController struct{}
+type LibraryController struct {
+}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
+func (lc LibraryController) GetByKey(repository repository.BookRepository, ctx context.Context, params martini.Params, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
-
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+		utils.ErrorResponse(w, err)
 		return
 	}
 
-	var book models.Book
-	key := datastore.IDKey("Book", int64(id), nil)
-
-	err = client.Get(ctx, key, &book)
-
+	book, err := repository.GetBook(ctx, int(id))
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w, err)
 		return
 	}
 
 	jsonStr, err := json.MarshalIndent(book, "", "  ")
-
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	utils.OKResponse(w, jsonStr)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+func (lc LibraryController) ListAll(repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter) {
+	qs := r.URL.Query()
+	var books []models.Book
+	var filters map[string]string = make(map[string]string)
 
-	defer client.Close()
-
-	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
+	if qs.Has("title") {
+		filters["Title"] = qs.Get("title")
+	}
+	if qs.Has("author") {
+		filters["Author"] = qs.Get("author")
 	}
 
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+	books = repo.GetBooks(ctx, filters)
+
+	sort.Slice(books, func(i, j int) bool { return books[i].Id < books[j].Id })
+
+	jsonStr, err := json.MarshalIndent(books, "", "  ")
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.ErrorResponse(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	utils.OKResponse(w, jsonStr)
+}
+
+func (lc LibraryController) Borrow(repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter, params martini.Params) {
+
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+	err = repo.Lending(ctx, id, true)
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (lc LibraryController) Return(repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter, params martini.Params) {
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+	err = repo.Lending(ctx, id, false)
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (lc LibraryController) AddBook(book models.Book, repo repository.BookRepository, ctx context.Context, r *http.Request,
+	w http.ResponseWriter) {
+
+	id, err := repo.AddBook(ctx, book)
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+	jsonStr, _ := json.MarshalIndent(id, "", "  ")
+	utils.OKResponse(w, jsonStr)
+}
+
+func(lc LibraryController) DeleteBook(repo repository.BookRepository, ctx context.Context, params martini.Params, w http.ResponseWriter) {
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+
+	if err := repo.DeleteBook(ctx, id); err != nil {
+		utils.ErrorResponse(w, err)
+		return
+	}
+
 }
