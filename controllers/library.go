@@ -71,7 +71,7 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	var output []models.Book
-	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book"))
+	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book").Order("Id"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
