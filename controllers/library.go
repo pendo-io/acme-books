@@ -14,54 +14,64 @@ import (
 	"acme-books/models"
 )
 
-type LibraryController struct{}
+type LibraryController struct {
+	ctx    context.Context
+	client *datastore.Client
+}
+
+func NewLibraryController() *LibraryController {
+	lc := new(LibraryController)
+	lc.ctx = context.Background()
+	lc.client, _ = datastore.NewClient(lc.ctx, "acme-books")
+
+	books := []models.Book{
+		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
+		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
+		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
+		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
+	}
+
+	var keys []*datastore.Key
+
+	for _, book := range books {
+		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
+	}
+
+	if _, err := lc.client.PutMulti(lc.ctx, keys, books); err != nil {
+		fmt.Println(err)
+	}
+
+	return lc
+}
+func (lc LibraryController) Close() error {
+	return lc.client.Close()
+}
 
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
 
 	id, err := strconv.Atoi(params["id"])
-
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	var book models.Book
 	key := datastore.IDKey("Book", int64(id), nil)
-
-	err = client.Get(ctx, key, &book)
-
+	var book models.Book
+	err = lc.client.Get(lc.ctx, key, &book)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	jsonStr, err := json.MarshalIndent(book, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	writeJson(book, w)
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
 
 	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
+	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book"))
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
@@ -72,7 +82,11 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 		output = append(output, b)
 	}
 
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+	writeJson(output, w)
+}
+
+func writeJson(item interface{}, w http.ResponseWriter) {
+	jsonStr, err := json.MarshalIndent(item, "", "  ")
 
 	if err != nil {
 		fmt.Println(err)

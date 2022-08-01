@@ -7,7 +7,7 @@ import (
 )
 
 func NewRouter() *martini.ClassicMartini {
-	libraryController := new(controllers.LibraryController)
+	libraryController := controllers.NewLibraryController()
 
 	router := martini.Classic()
 
