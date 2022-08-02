@@ -7,12 +7,15 @@ import (
 )
 
 func NewRouter() *martini.ClassicMartini {
-	libraryController := new(controllers.LibraryController)
+	libraryController := controllers.NewLibraryController()
 
 	router := martini.Classic()
 
 	router.Get("/books", libraryController.ListAll)
 	router.Get("/books/:id", libraryController.GetByKey)
+	router.Put("/books/:id/borrow", libraryController.Borrow)
+	router.Put("/books/:id/return", libraryController.Return)
+	router.Post("/book", libraryController.New)
 
 	return router
 }
