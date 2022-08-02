@@ -144,6 +144,46 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 	writeJson(output, w)
 }
 
+func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter) {
+	lc.SetBorrowed(params, w, true)
+	return
+}
+
+func (lc LibraryController) Return(params martini.Params, w http.ResponseWriter) {
+	lc.SetBorrowed(params, w, false)
+	return
+}
+func (lc LibraryController) SetBorrowed(params martini.Params, w http.ResponseWriter, borrowed bool) {
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	key := datastore.IDKey("Book", int64(id), nil)
+
+	var book models.Book
+	err = lc.client.Get(lc.ctx, key, &book)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if book.Borrowed == borrowed {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	book.Borrowed = borrowed
+	_, err = lc.client.Mutate(lc.ctx, datastore.NewUpdate(key, &book))
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return
+}
+
 func writeJson(item interface{}, w http.ResponseWriter) {
 	jsonStr, err := json.MarshalIndent(item, "", "  ")
 
