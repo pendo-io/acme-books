@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 
+	"acme-books/models"
 	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
-
-	"acme-books/models"
 )
 
 type LibraryController struct {
@@ -69,13 +68,73 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
+	filter := r.URL.Query().Get("q")
 
 	var output []models.Book
-	it := lc.client.Run(lc.ctx, datastore.NewQuery("Book").Order("Id"))
+	query := datastore.NewQuery("Book")
+
+	if filter != "" {
+		splitIndices := regexp.MustCompile("(<=|<|>=|>|=)").FindStringIndex(filter)
+		if len(splitIndices) < 2 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		sepIndex := splitIndices[1]
+		fieldName := filter[:splitIndices[0]]
+		filterStr := filter[:sepIndex]
+
+		metaQuery := datastore.NewQuery("__property__")
+		type Prop struct {
+			Repr []string `datastore:"property_representation"`
+		}
+		var props []Prop
+
+		keys, err := lc.client.GetAll(lc.ctx, metaQuery, &props)
+		//fmt.Println(props)
+		//fmt.Println(keys)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		var columnKind string
+		ok := false
+		for i, k := range keys {
+			if k.Name == fieldName {
+				columnKind = props[i].Repr[0]
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		var filterVal interface{}
+		switch columnKind {
+		case "BOOLEAN":
+			filterVal, err = strconv.ParseBool(filter[sepIndex:])
+		case "INT64":
+			filterVal, err = strconv.Atoi(filter[sepIndex:])
+		default:
+			filterVal = filter[sepIndex:]
+		}
+		//fmt.Println(fieldName)
+		//fmt.Println(filterStr)
+		//fmt.Println(filterVal)
+
+		query = query.Filter(filterStr, filterVal)
+
+	}
+
+	query = query.Order("Id")
+	it := lc.client.Run(lc.ctx, query)
+
 	for {
 		var b models.Book
 		_, err := it.Next(&b)
-		if err == iterator.Done {
+		if err != nil {
 			fmt.Println(err)
 			break
 		}
