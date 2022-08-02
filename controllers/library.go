@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -182,6 +184,57 @@ func (lc LibraryController) SetBorrowed(params martini.Params, w http.ResponseWr
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return
+}
+
+func (lc LibraryController) New(r *http.Request, w http.ResponseWriter) {
+	var book models.Book
+	body := new(bytes.Buffer)
+
+	_, err := io.Copy(body, r.Body)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body.Bytes(), &book)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	key := datastore.IncompleteKey("Book", nil)
+	fmt.Println(key)
+	key, err = lc.client.Put(lc.ctx, key, &book)
+	fmt.Println(key)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	type bookWithKey struct {
+		Key string
+		models.Book
+	}
+	amendedBook := *new(bookWithKey)
+	amendedBook.Key = (*key).String()
+	amendedBook.Book = book
+
+	fmt.Println("AmendedBook:", amendedBook)
+
+	jsonStr, err := json.MarshalIndent(amendedBook, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println(string(jsonStr))
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonStr)
 }
 
 func writeJson(item interface{}, w http.ResponseWriter) {

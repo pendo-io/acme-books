@@ -15,6 +15,7 @@ func NewRouter() *martini.ClassicMartini {
 	router.Get("/books/:id", libraryController.GetByKey)
 	router.Put("/books/:id/borrow", libraryController.Borrow)
 	router.Put("/books/:id/return", libraryController.Return)
+	router.Post("/book", libraryController.New)
 
 	return router
 }
