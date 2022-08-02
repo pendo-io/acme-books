@@ -24,8 +24,10 @@ func main() {
 
 	host := getEnvWithDefault("HOST", "localhost")
 	port := getEnvWithDefault("PORT", "3030")
-
-	server.Init(host, port)
+	err = server.Init(host, port)
+	if err != nil {
+		log.Fatalf("Failed to start up server due to: %s", err)
+	}
 }
 
 func getEnvWithDefault(key, fallback string) string {
