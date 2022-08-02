@@ -51,18 +51,14 @@ func (lc LibraryController) Close() error {
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
 
 	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 
 	key := datastore.IDKey("Book", int64(id), nil)
 	var book models.Book
 	err = lc.client.Get(lc.ctx, key, &book)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	if handleNoneNilErr(err, w, http.StatusInternalServerError) {
 		return
 	}
 
@@ -87,15 +83,12 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 		metaQuery := datastore.NewQuery("__property__")
 		type Prop struct {
-			Repr []string `datastore:"property_representation"`
+			Reps []string `datastore:"property_representation"`
 		}
 		var props []Prop
 
 		keys, err := lc.client.GetAll(lc.ctx, metaQuery, &props)
-		//fmt.Println(props)
-		//fmt.Println(keys)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+		if handleNoneNilErr(err, w, http.StatusBadRequest) {
 			return
 		}
 
@@ -103,7 +96,7 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 		ok := false
 		for i, k := range keys {
 			if k.Name == fieldName {
-				columnKind = props[i].Repr[0]
+				columnKind = props[i].Reps[0]
 				ok = true
 				break
 			}
@@ -122,9 +115,6 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 		default:
 			filterVal = filter[sepIndex:]
 		}
-		//fmt.Println(fieldName)
-		//fmt.Println(filterStr)
-		//fmt.Println(filterVal)
 
 		query = query.Filter(filterStr, filterVal)
 
@@ -157,18 +147,14 @@ func (lc LibraryController) Return(params martini.Params, w http.ResponseWriter)
 }
 func (lc LibraryController) SetBorrowed(params martini.Params, w http.ResponseWriter, borrowed bool) {
 	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 	key := datastore.IDKey("Book", int64(id), nil)
 
 	var book models.Book
 	err = lc.client.Get(lc.ctx, key, &book)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 	if book.Borrowed == borrowed {
@@ -177,9 +163,7 @@ func (lc LibraryController) SetBorrowed(params martini.Params, w http.ResponseWr
 	}
 	book.Borrowed = borrowed
 	_, err = lc.client.Mutate(lc.ctx, datastore.NewUpdate(key, &book))
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -191,27 +175,18 @@ func (lc LibraryController) New(r *http.Request, w http.ResponseWriter) {
 	body := new(bytes.Buffer)
 
 	_, err := io.Copy(body, r.Body)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 
 	err = json.Unmarshal(body.Bytes(), &book)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 
 	key := datastore.IncompleteKey("Book", nil)
-	fmt.Println(key)
 	key, err = lc.client.Put(lc.ctx, key, &book)
-	fmt.Println(key)
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 
@@ -223,29 +198,33 @@ func (lc LibraryController) New(r *http.Request, w http.ResponseWriter) {
 	amendedBook.Key = (*key).String()
 	amendedBook.Book = book
 
-	fmt.Println("AmendedBook:", amendedBook)
-
 	jsonStr, err := json.MarshalIndent(amendedBook, "", "  ")
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+	if handleNoneNilErr(err, w, http.StatusBadRequest) {
 		return
 	}
 
-	fmt.Println(string(jsonStr))
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	_, err = w.Write(jsonStr)
+	handleNoneNilErr(err, w, http.StatusInternalServerError)
 }
 
 func writeJson(item interface{}, w http.ResponseWriter) {
 	jsonStr, err := json.MarshalIndent(item, "", "  ")
 
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+	if handleNoneNilErr(err, w, http.StatusInternalServerError) {
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	_, err = w.Write(jsonStr)
+	handleNoneNilErr(err, w, http.StatusInternalServerError)
+}
+
+func handleNoneNilErr(err error, w http.ResponseWriter, httpResponseStatusCode int) bool {
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(httpResponseStatusCode)
+		return true
+	}
+	return false
 }
