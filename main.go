@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/datastore"
 
@@ -44,13 +45,15 @@ func bootstrapBooks() {
 	books := []models.Book{
 		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
 		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
-		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
-		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
+		{Id: 3, Author: "Variorewgr4g4gus", Title: "Collins Dictionary", Borrowed: false},
+		{Id: 4, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
 	}
 
 	var keys []*datastore.Key
 
-	for _, book := range books {
+	for index, book := range books {
+		books[index].Title = strings.Title(book.Title)
+		books[index].Author = strings.Title(book.Author)
 		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
 	}
 
