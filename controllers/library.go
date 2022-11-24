@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
 
 	"acme-books/models"
 )
@@ -17,11 +15,6 @@ import (
 type LibraryController struct{}
 
 func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -30,13 +23,9 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 		return
 	}
 
-	var book models.Book
-	key := datastore.IDKey("Book", int64(id), nil)
-
-	err = client.Get(ctx, key, &book)
+	book, err := models.FindBookById(id)
 
 	if err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -54,25 +43,21 @@ func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWrite
 }
 
 func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+	params := r.URL.Query()
 
-	defer client.Close()
-
-	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
+	filters := models.BookFilter{
+		Author: params.Get("author"),
+		Title:  params.Get("title"),
 	}
 
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+	books, err := models.ListBooks(filters)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	jsonStr, err := json.MarshalIndent(books, "", "  ")
 
 	if err != nil {
 		fmt.Println(err)
@@ -82,4 +67,94 @@ func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
+}
+
+func (lc LibraryController) CreateBook(book models.Book, r *http.Request, w http.ResponseWriter) {
+	book, err := models.AddBook(book)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	jsonStr, err := json.MarshalIndent(book, "", "  ")
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonStr)
+}
+
+func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter) {
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid id"))
+		return
+	}
+
+	book, err := models.FindBookById(id)
+
+	if book.Borrowed == true {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Book already borrowed"))
+		return
+	}
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
+	_, err = models.BorrowBook(book)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (lc LibraryController) Return(params martini.Params, w http.ResponseWriter) {
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid id"))
+		return
+	}
+
+	book, err := models.FindBookById(id)
+
+	if book.Borrowed == false {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Cannot return a book that is not borrowed"))
+		return
+	}
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
+	_, err = models.ReturnBook(book)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
