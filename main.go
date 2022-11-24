@@ -17,7 +17,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file! Did you forget to run `gcloud beta emulators datastore env-init > .env`")
+		log.Fatal("Error loading .env file! Did you forget to run `gcloud beta emulators store env-init > .env`")
 	}
 
 	bootstrapBooks()
