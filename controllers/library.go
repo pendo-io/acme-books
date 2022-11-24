@@ -1,85 +1,127 @@
 package controllers
 
 import (
-	"context"
+	"errors"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-martini/martini"
-	"google.golang.org/api/iterator"
 
 	"acme-books/models"
+	"acme-books/utils"
 )
 
 type LibraryController struct{}
 
-func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+func (lc LibraryController) GetByKey(params martini.Params, w http.ResponseWriter, bookInt models.BookInterface) {
+	id, err := strconv.Atoi(params["id"])
 
-	defer client.Close()
+	if err != nil { 
+		utils.HandleError(err, w, http.StatusBadRequest)
+		return
+	}
 
+	book, err := bookInt.GetByKey(id)
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			utils.HandleError(err, w, http.StatusNotFound)
+		} else {
+			utils.HandleError(err, w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	utils.WriteJsonResp(w, book)
+}
+
+func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter, bookInt models.BookInterface) {
+	title := r.URL.Query().Get("title"); 
+
+	books, err := bookInt.Query(title)
+	
+	if err != nil {
+		utils.HandleError(err, w, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJsonResp(w, books)
+}
+
+func (lc LibraryController) Borrow(params martini.Params, w http.ResponseWriter, bookInt models.BookInterface) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+		utils.HandleError(err, w, http.StatusBadRequest)
 		return
 	}
 
-	var book models.Book
-	key := datastore.IDKey("Book", int64(id), nil)
-
-	err = client.Get(ctx, key, &book)
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	jsonStr, err := json.MarshalIndent(book, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	getBookAndUpdateStatus(id, "borrow", w, bookInt)
 }
 
-func (lc LibraryController) ListAll(r *http.Request, w http.ResponseWriter) {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
-
-	defer client.Close()
-
-	var output []models.Book
-
-	it := client.Run(ctx, datastore.NewQuery("Book"))
-	for {
-		var b models.Book
-		_, err := it.Next(&b)
-		if err == iterator.Done {
-			fmt.Println(err)
-			break
-		}
-		output = append(output, b)
-	}
-
-	jsonStr, err := json.MarshalIndent(output, "", "  ")
+func (lc LibraryController) Return(params martini.Params, w http.ResponseWriter, bookInt models.BookInterface) {
+	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.HandleError(err, w, http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	getBookAndUpdateStatus(id, "return", w, bookInt)
+}
+
+func getBookAndUpdateStatus(id int, status string, w http.ResponseWriter, bookInt models.BookInterface) {
+	book, err := bookInt.GetByKey(id)
+
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			utils.HandleError(err, w, http.StatusBadRequest)
+		} else {
+			utils.HandleError(err, w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if status == "borrow" && book.Borrowed {
+		err := errors.New("Already Borrowed")
+		utils.HandleError(err, w, http.StatusBadRequest)
+		return
+	} else if status == "return" && !book.Borrowed {
+		err := errors.New("Not Borrowed") 
+		utils.HandleError(err, w, http.StatusBadRequest)
+		return
+	}
+
+	book.Borrowed = !book.Borrowed
+
+	_, error := bookInt.Put(book, false)
+
+	if error != nil {
+		utils.HandleError(err, w, http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (lc LibraryController) Create(r *http.Request, w http.ResponseWriter, bookInt models.BookInterface) {
+	if body, err := ioutil.ReadAll(r.Body); err != nil { 
+		utils.HandleError(err, w, http.StatusInternalServerError)
+	} else {
+		var book models.Book
+		
+		if err = json.Unmarshal(body, &book); err != nil { 
+			utils.HandleError(err, w, http.StatusInternalServerError)
+		} else {
+			id, err := bookInt.Put(book, true)
+			
+			if err != nil {
+				utils.HandleError(err, w, http.StatusInternalServerError)
+			}
+			book.Id = id
+			utils.WriteJsonResp(w, book)
+		}
+	}
 }
