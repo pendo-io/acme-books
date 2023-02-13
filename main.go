@@ -8,7 +8,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 
-	"acme-books/models"
+	"acme-books/model"
 	"acme-books/server"
 
 	"github.com/joho/godotenv"
@@ -41,7 +41,7 @@ func bootstrapBooks() {
 
 	defer client.Close()
 
-	books := []models.Book{
+	books := []model.Book{
 		{Id: 1, Author: "George Orwell", Title: "1984", Borrowed: false},
 		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
 		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
