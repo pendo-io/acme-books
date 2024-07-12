@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
+	"acme-books/utils"
 	"os"
 
 	"cloud.google.com/go/datastore"
@@ -16,9 +14,7 @@ import (
 
 func main() {
 	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file! Did you forget to run `gcloud beta emulators datastore env-init > .env`")
-	}
+	utils.HandleFatalError(err, "Error loading .env file! Did you forget to run `gcloud beta emulators datastore env-init > .env`")
 
 	bootstrapBooks()
 
@@ -36,8 +32,7 @@ func getEnvWithDefault(key, fallback string) string {
 }
 
 func bootstrapBooks() {
-	ctx := context.Background()
-	client, _ := datastore.NewClient(ctx, "acme-books")
+	ctx, client := utils.CreateClient()
 
 	defer client.Close()
 
@@ -54,7 +49,7 @@ func bootstrapBooks() {
 		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
 	}
 
-	if _, err := client.PutMulti(ctx, keys, books); err != nil {
-		fmt.Println(err)
-	}
+	_, err := client.PutMulti(ctx, keys, books)
+
+	utils.HandleGeneralError(err)
 }
