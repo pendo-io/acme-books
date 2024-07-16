@@ -22,7 +22,7 @@ func (l Library) GetByKey(params martini.Params, w http.ResponseWriter) {
 		return
 	}
 
-	book, err := model.BookImplementation{}.ByKey(id)
+	book, err := model.BookImplementation{}.GetByKey(id)
 
 	if err != nil {
 		fmt.Println(err)
