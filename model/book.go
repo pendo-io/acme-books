@@ -23,7 +23,7 @@ type BookInterface interface {
 type BookImplementation struct {
 }
 
-func (bi BookImplementation) ByKey(id int) (Book, error) {
+func (bi BookImplementation) GetByKey(id int) (Book, error) {
 	ctx := context.Background()
 	client, _ := datastore.NewClient(ctx, "acme-books")
 

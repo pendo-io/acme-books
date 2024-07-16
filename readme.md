@@ -1,11 +1,6 @@
 # Acme Books project
 
-1. Start the emulator. Changes to the datastore are not persisted between sessions
-```
-docker compose up
-```
-
-&nbsp;&nbsp;&nbsp;&nbsp;**Note:** For Mac M1, if you have trouble with the amd64 `singularities/datastore-emulator` docker image, running the datastore emulator locally could be an option:
+1. Run the datastore emulator locally:
 ```
 gcloud components install cloud-datastore-emulator
 gcloud beta emulators datastore start --project=acme-books --host-port=localhost:3031 --no-store-on-disk
@@ -33,7 +28,7 @@ http://localhost:3030/books/4
 
 # Exercise
 1. Refactor the datastore client usage to avoid duplicate code (see main.go and library.go)
-2. Order the results for the book list by id
+2. Order the results for the book list by author name
 3. Allow filtering to be applied to the book list (via a query parameter)
 4. Add a new end point to rent or return a book
 ```
