@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/go-martini/martini"
 
@@ -30,22 +32,53 @@ func (l Library) GetByKey(params martini.Params, w http.ResponseWriter) {
 		return
 	}
 
-	jsonStr, err := json.MarshalIndent(book, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonStr)
+	writeJsonResponse(w, book)
 }
 
 func (l Library) ListAll(r *http.Request, w http.ResponseWriter) {
 	books := model.BookImplementation{}.ListAll()
 
-	jsonStr, err := json.MarshalIndent(books, "", "  ")
+	queryBooks(&books, r)
+
+	slices.SortFunc(books, func(a, b model.Book) int {
+		return strings.Compare(strings.ToLower(a.Author), strings.ToLower(b.Author))
+
+	})
+
+	writeJsonResponse(w, books)
+}
+
+func (l Library) NewBook(r *http.Request, w http.ResponseWriter) {
+	var book model.Book
+	err := json.NewDecoder(r.Body).Decode(&book)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	book, err = model.BookImplementation{}.Put(book)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	writeJsonResponse(w, book)
+
+}
+
+func (l Library) Borrow(params martini.Params, w http.ResponseWriter) {
+	changeBorrowStatus(params, w, true)
+}
+
+func (l Library) Return(params martini.Params, w http.ResponseWriter) {
+	changeBorrowStatus(params, w, false)
+}
+
+func writeJsonResponse(w http.ResponseWriter, value any) {
+	jsonStr, err := json.MarshalIndent(value, "", "  ")
 
 	if err != nil {
 		fmt.Println(err)
@@ -55,4 +88,67 @@ func (l Library) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
+
+}
+
+func changeBorrowStatus(params martini.Params, w http.ResponseWriter, borrow bool) {
+	id, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	book, err := model.BookImplementation{}.GetByKey(id)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	changedBook := book
+	changedBook.Borrowed = borrow
+
+	if book == changedBook {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = model.BookImplementation{}.Put(changedBook)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+func queryBooks(books *[]model.Book, r *http.Request) {
+	title := strings.ToLower(r.URL.Query().Get("title"))
+	writer := strings.ToLower(r.URL.Query().Get("writer"))
+	borrowed := strings.ToLower(r.URL.Query().Get("borrowed"))
+
+	if title == "" && writer == "" && borrowed == "" {
+		return
+	}
+
+	var queriedBooks []model.Book
+
+	for _, book := range *books {
+		if strings.ToLower(book.Title) == title {
+			queriedBooks = append(queriedBooks, book)
+		}
+		if strings.ToLower(book.Author) == writer {
+			queriedBooks = append(queriedBooks, book)
+		}
+		if b, _ := strconv.ParseBool(borrowed); borrowed != "" && book.Borrowed == b {
+			queriedBooks = append(queriedBooks, book)
+		}
+	}
+	*books = queriedBooks
 }

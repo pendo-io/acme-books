@@ -46,15 +46,14 @@ func bootstrapBooks() {
 		{Id: 2, Author: "George Orwell", Title: "Animal Farm", Borrowed: false},
 		{Id: 3, Author: "Robert Jordan", Title: "Eye of the world", Borrowed: false},
 		{Id: 4, Author: "Various", Title: "Collins Dictionary", Borrowed: false},
+		{Id: 5, Author: "Annie", Title: "idk", Borrowed: false},
 	}
-
-	var keys []*datastore.Key
 
 	for _, book := range books {
-		keys = append(keys, datastore.IDKey("Book", book.Id, nil))
+		_, err := model.BookImplementation{}.Put(book)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
-	if _, err := client.PutMulti(ctx, keys, books); err != nil {
-		fmt.Println(err)
-	}
 }
