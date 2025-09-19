@@ -18,6 +18,7 @@ type Book struct {
 type BookInterface interface {
 	GetByKey(id int) (Book, error)
 	ListAll() []Book
+	Put(book Book) (Book, error)
 }
 
 type BookImplementation struct {

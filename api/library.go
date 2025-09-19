@@ -35,10 +35,16 @@ func (l Library) GetByKey(params martini.Params, w http.ResponseWriter) {
 	writeJsonResponse(w, book)
 }
 
-func (l Library) ListAll(r *http.Request, w http.ResponseWriter) {
-	books := model.BookImplementation{}.ListAll()
+func (l Library) ListAll(r *http.Request, w http.ResponseWriter, bookInterface model.BookInterface) {
+	books := bookInterface.ListAll()
 
-	queryBooks(&books, r)
+	books, err := queryBooks(books, r)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	slices.SortFunc(books, func(a, b model.Book) int {
 		return strings.Compare(strings.ToLower(a.Author), strings.ToLower(b.Author))
@@ -69,12 +75,12 @@ func (l Library) NewBook(r *http.Request, w http.ResponseWriter) {
 
 }
 
-func (l Library) Borrow(params martini.Params, w http.ResponseWriter) {
-	changeBorrowStatus(params, w, true)
+func (l Library) Borrow(params martini.Params, w http.ResponseWriter, bookInterface model.BookInterface) {
+	changeBorrowStatus(params, w, bookInterface, true)
 }
 
-func (l Library) Return(params martini.Params, w http.ResponseWriter) {
-	changeBorrowStatus(params, w, false)
+func (l Library) Return(params martini.Params, w http.ResponseWriter, bookInterface model.BookInterface) {
+	changeBorrowStatus(params, w, bookInterface, false)
 }
 
 func writeJsonResponse(w http.ResponseWriter, value any) {
@@ -91,7 +97,7 @@ func writeJsonResponse(w http.ResponseWriter, value any) {
 
 }
 
-func changeBorrowStatus(params martini.Params, w http.ResponseWriter, borrow bool) {
+func changeBorrowStatus(params martini.Params, w http.ResponseWriter, bookInterface model.BookInterface, borrow bool) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -100,7 +106,7 @@ func changeBorrowStatus(params martini.Params, w http.ResponseWriter, borrow boo
 		return
 	}
 
-	book, err := model.BookImplementation{}.GetByKey(id)
+	book, err := bookInterface.GetByKey(id)
 
 	if err != nil {
 		fmt.Println(err)
@@ -116,7 +122,7 @@ func changeBorrowStatus(params martini.Params, w http.ResponseWriter, borrow boo
 		return
 	}
 
-	_, err = model.BookImplementation{}.Put(changedBook)
+	_, err = bookInterface.Put(changedBook)
 
 	if err != nil {
 		fmt.Println(err)
@@ -128,27 +134,33 @@ func changeBorrowStatus(params martini.Params, w http.ResponseWriter, borrow boo
 
 }
 
-func queryBooks(books *[]model.Book, r *http.Request) {
+func queryBooks(books []model.Book, r *http.Request) ([]model.Book, error) {
 	title := strings.ToLower(r.URL.Query().Get("title"))
 	writer := strings.ToLower(r.URL.Query().Get("writer"))
 	borrowed := strings.ToLower(r.URL.Query().Get("borrowed"))
 
 	if title == "" && writer == "" && borrowed == "" {
-		return
+		return books, nil
 	}
 
 	var queriedBooks []model.Book
 
-	for _, book := range *books {
+	b, err := strconv.ParseBool(borrowed)
+
+	if err != nil && borrowed != "" {
+		return nil, err
+	}
+
+	for _, book := range books {
 		if strings.ToLower(book.Title) == title {
 			queriedBooks = append(queriedBooks, book)
 		}
 		if strings.ToLower(book.Author) == writer {
 			queriedBooks = append(queriedBooks, book)
 		}
-		if b, _ := strconv.ParseBool(borrowed); borrowed != "" && book.Borrowed == b {
+		if borrowed != "" && book.Borrowed == b {
 			queriedBooks = append(queriedBooks, book)
 		}
 	}
-	*books = queriedBooks
+	return queriedBooks, nil
 }
