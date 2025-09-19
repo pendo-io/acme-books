@@ -18,6 +18,7 @@ type Book struct {
 type BookInterface interface {
 	GetByKey(id int) (Book, error)
 	ListAll() []Book
+	Put(book Book) (Book, error)
 }
 
 type BookImplementation struct {
@@ -57,4 +58,30 @@ func (bi BookImplementation) ListAll() []Book {
 	}
 
 	return output
+}
+
+func (bi BookImplementation) Put(book Book) (Book, error) {
+	ctx := context.Background()
+	client, _ := datastore.NewClient(ctx, "acme-books")
+
+	defer client.Close()
+
+	var key *datastore.Key
+
+	if book.Id == 0 {
+		keys, err := client.AllocateIDs(ctx, []*datastore.Key{datastore.IncompleteKey("Book", nil)})
+		if err != nil {
+			return book, err
+		}
+		key = keys[0]
+		book.Id = key.ID
+
+	} else {
+		key = datastore.IDKey("Book", book.Id, nil)
+	}
+
+	_, err := client.Put(ctx, key, &book)
+
+	return book, err
+
 }
