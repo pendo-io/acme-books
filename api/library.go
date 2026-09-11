@@ -9,11 +9,12 @@ import (
 	"github.com/go-martini/martini"
 
 	"acme-books/model"
+	"acme-books/pendo"
 )
 
 type Library struct{}
 
-func (l Library) GetByKey(params martini.Params, w http.ResponseWriter) {
+func (l Library) GetByKey(params martini.Params, r *http.Request, w http.ResponseWriter) {
 	id, err := strconv.Atoi(params["id"])
 
 	if err != nil {
@@ -40,6 +41,17 @@ func (l Library) GetByKey(params martini.Params, w http.ResponseWriter) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
+
+	pendo.Track("Book Viewed", "system", "system", map[string]interface{}{
+		"book_id":     id,
+		"book_title":  book.Title,
+		"book_author": book.Author,
+		"borrowed":    book.Borrowed,
+	}, map[string]string{
+		"userAgent": r.UserAgent(),
+		"ip":        r.RemoteAddr,
+		"url":       r.URL.String(),
+	})
 }
 
 func (l Library) ListAll(r *http.Request, w http.ResponseWriter) {
@@ -55,4 +67,12 @@ func (l Library) ListAll(r *http.Request, w http.ResponseWriter) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonStr)
+
+	pendo.Track("Books Listed", "system", "system", map[string]interface{}{
+		"book_count": len(books),
+	}, map[string]string{
+		"userAgent": r.UserAgent(),
+		"ip":        r.RemoteAddr,
+		"url":       r.URL.String(),
+	})
 }
