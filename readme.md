@@ -26,6 +26,11 @@ http://localhost:3030/books
 http://localhost:3030/books/4
 ```
 
+# Pendo Track Events
+The API sends server-side Pendo Track Events (see `pendo/events.go`). Configure them with environment variables:
+- `PENDO_TRACK_EVENT_SECRET`: the Pendo Track Event shared secret. Tracking is disabled when it is not set. Do not add it to `.env`, which is committed.
+- `PENDO_DATA_HOST` (optional): the Pendo data host, `data.pendo.io` by default.
+
 # Exercise
 1. Refactor the datastore client usage to avoid duplicate code (see main.go and library.go)
 2. Order the results for the book list by author name
